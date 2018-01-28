@@ -15,7 +15,7 @@ from flask import Flask, request, render_template, url_for
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, RadioField, ValidationError
 from wtforms.validators import Required
-
+import requests, json
 #####################
 ##### APP SETUP #####
 #####################
@@ -26,7 +26,10 @@ app.config['SECRET_KEY'] = 'hardtoguessstring'
 ####################
 ###### FORMS #######
 ####################
-
+class AlbumEntryForm(FlaskForm):
+    album = StringField('Enter the name of an album name?', validators=[Required()])
+    rating = RadioField('How much do you like this album? (1 low, 3 high)', choices =[(1, '1'), (2, "2"), (3, "3")], validators=[Required()])
+    submit = SubmitField('Submit')
 
 
 
@@ -42,6 +45,50 @@ def hello_world():
 @app.route('/user/<name>')
 def hello_user(name):
     return '<h1>Hello {0}<h1>'.format(name)
+
+#New Routes
+
+@app.route('/artistform')
+def artistform():
+    return render_template('artistform.html')
+
+@app.route('/artistinfo', methods = ['GET', 'POST'])
+def artistinfo():
+    if request.method == "GET":
+        artist = request.args.get("artist", "")
+        url = "https://itunes.apple.com/search?term=" + artist
+        result = requests.get(url)
+        objects = result.json()["results"]
+        return render_template("artist_info.html", objects=objects)
+    else:
+        return "Please enter a valid artist name!"
+
+@app.route('/artistlinks')
+def artistlinks():
+    return render_template('artist_links.html')
+
+@app.route('/specific/song/<artist_name>')
+def artist_name(artist_name):
+    url = "https://itunes.apple.com/search?term=" + artist_name
+    result = requests.get(url)
+    results = result.json()["results"]
+    return render_template("specific_artist.html", results=results)
+
+@app.route('/album_entry')
+def album_entry():
+    albumForm = AlbumEntryForm()
+    return render_template("album_entry.html", form=albumForm)
+
+@app.route('/album_result', methods=['GET', 'POST'])
+def album_result():
+    if request.method == "POST":
+        album_name = request.form["album"]
+        rating = request.form["rating"]
+        return render_template('album_data.html', rating=rating, album_name=album_name)
+    else:
+        return "Error!"
+
+
 
 
 if __name__ == '__main__':
